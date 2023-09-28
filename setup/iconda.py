@@ -1,0 +1,2 @@
+import condacolab
+condacolab.install()
