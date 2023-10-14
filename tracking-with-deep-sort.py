@@ -4,7 +4,7 @@ warnings.filterwarnings("ignore")
 from models import *
 from utils import *
 
-import os, sys, time, datetime, random
+import os, sys, time, datetime, random, cv2
 import torch
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
@@ -13,6 +13,11 @@ from torch.autograd import Variable
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from PIL import Image
+
+# initialize deepSort object and video capture
+from deep_sort import nn_matching
+from deep_sort.detection import Detection
+from deep_sort.tracker import Tracker
 
 config_path='config/yolov3.cfg'
 weights_path='config/yolov3.weights'
@@ -47,20 +52,18 @@ def detect_image(img):
     # run inference on the model and get detections
     with torch.no_grad():
         detections = model(input_img)
-        detections = utils.non_max_suppression(detections, 80, conf_thres, nms_thres)
+        detections = utils.non_max_suppression(detections, 80, conf_thres, nms_thres)\
+    detection_list = []
+    for row in detections[0]:
+        bbox, confidence, feature = row[0:4], row[4], row[10:]
+        if bbox[3] < min_height:
+            continue
+        detection_list.append(Detection(bbox, confidence, feature))
     return detections[0]
-
-videopath = '/root/tracking-with-sort/MOT16-04-raw.webm'
-
-import cv2
-from IPython.display import clear_output
 
 cmap = plt.get_cmap('tab20b')
 colors = [cmap(i)[:3] for i in np.linspace(0, 1, 20)]
 
-# initialize Sort object and video capture
-from sort import *
-vid = cv2.VideoCapture(videopath)
 mot_tracker = Sort()
 
 #while(True):

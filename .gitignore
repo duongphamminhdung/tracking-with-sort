@@ -1,0 +1,6 @@
+*.pt
+*.pth
+*.pyc
+*.avi
+*.webm
+*.weights
