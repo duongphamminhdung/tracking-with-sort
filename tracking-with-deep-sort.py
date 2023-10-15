@@ -19,6 +19,7 @@ from deep_sort import nn_matching
 from deep_sort.detection import Detection
 from deep_sort.tracker import Tracker
 from utils import generate_detections
+from deep_sort import preprocessing
 
 config_path='config/yolov3.cfg'
 weights_path='config/yolov3.weights'
@@ -39,8 +40,10 @@ Tensor = torch.cuda.FloatTensor
 #for detections
 detection_model_path = '/root/tracking-with-sort/config/mars-small128.pb'
 encoder = generate_detections.create_box_encoder(detection_model_path, batch_size=32)
-def detect_image(img):
+
+def detect_image(frame):
     # scale and pad image
+    img = Image.fromarray(frame)
     ratio = min(img_size/img.size[0], img_size/img.size[1])
     imw = round(img.size[0] * ratio)
     imh = round(img.size[1] * ratio)
@@ -59,9 +62,10 @@ def detect_image(img):
         detections = utils.non_max_suppression(detections, 80, conf_thres, nms_thres)
     detection_list = []
     for row in detections[0]:
-        bbox, confidence, feature = row[0:4], row[4], row[10:]
-        bgr_image = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-        feature = encoder(bgr_image, row[0:4].copy())
+        bbox, confidence = row[0:4], row[4]
+        # import pdb; pdb.set_trace()
+        bgr_image = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        feature = encoder(bgr_image, [row[0:4].cpu()])
         if bbox[3] < 0: #min_height
             continue
         detection_list.append(Detection(bbox, confidence, feature))
@@ -72,14 +76,14 @@ colors = [cmap(i)[:3] for i in np.linspace(0, 1, 20)]
 
 #for tracker
 metric = nn_matching.NearestNeighborDistanceMetric(
-    "cosine", max_cosine_distance, nn_budget)
+    metric="cosine", matching_threshold=0.2, budget=None)
 mot_tracker = Tracker(metric)
 
 
 def detector(frame, min_confidence=0.6):
     # ret, frame = vid.read()
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    pilimg = Image.fromarray(frame)
+    pilimg = frame
     detections = detect_image(pilimg)
     
     detections = [d for d in detections if d.confidence >= min_confidence]
@@ -88,7 +92,7 @@ def detector(frame, min_confidence=0.6):
     boxes = np.array([d.tlwh for d in detections])
     scores = np.array([d.confidence for d in detections])
     indices = preprocessing.non_max_suppression(
-        boxes, nms_max_overlap, scores)
+        boxes, 1, scores)
     detections = [detections[i] for i in indices]
     
     img = np.array(pilimg)
@@ -98,17 +102,16 @@ def detector(frame, min_confidence=0.6):
     unpad_w = img_size - pad_x
     if detections is not None:
         tracked_objects = []
-        tracker.predict()
-        tracker.update(detections)
-        for track in tracker.tracks:
+        mot_tracker.predict()
+        import pdb; pdb.set_trace()
+        mot_tracker.update(detections)
+        for track in mot_tracker.tracks:
             if not track.is_confirmed() or track.time_since_update > 1:
                 continue
             bbox = track.to_tlwh()
             tracked_objects.append([
                 bbox[0], bbox[1], bbox[2], bbox[3], track.track_id])
 
-        unique_labels = detections[:, -1].cpu().unique()
-        n_cls_preds = len(unique_labels)
         for x1, y1, x2, y2, obj_id in tracked_objects:
             box_h = int(((y2 - y1) / unpad_h) * img.shape[0])
             box_w = int(((x2 - x1) / unpad_w) * img.shape[1])
@@ -118,7 +121,6 @@ def detector(frame, min_confidence=0.6):
             color = colors[int(obj_id) % len(colors)]
             color = [i * 255 for i in color]
             cv2.rectangle(frame, (x1, y1), (x1+box_w, y1+box_h), color, 4)
-            cv2.rectangle(frame, (x1, y1-35), (x1+len(cls)*19+60, y1), color, -1)
     frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
     return frame
 
