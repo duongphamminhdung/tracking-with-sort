@@ -65,9 +65,10 @@ def detect_image(frame):
         bbox, confidence = row[0:4], row[4]
         # import pdb; pdb.set_trace()
         bgr_image = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-        feature = encoder(bgr_image, [row[0:4].cpu()])
+        feature = encoder(bgr_image, [row[0:4].cpu()]).squeeze()
         if bbox[3] < 0: #min_height
             continue
+        # import pdb; pdb.set_trace()
         detection_list.append(Detection(bbox, confidence, feature))
     return detection_list
 
