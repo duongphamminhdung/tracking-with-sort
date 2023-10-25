@@ -77,7 +77,7 @@ colors = [cmap(i)[:3] for i in np.linspace(0, 1, 20)]
 
 #for tracker
 metric = nn_matching.NearestNeighborDistanceMetric(
-    metric="cosine", matching_threshold=0.2, budget=None)
+    metric="cosine", matching_threshold=0.2, budget=45)
 mot_tracker = Tracker(metric)
 
 

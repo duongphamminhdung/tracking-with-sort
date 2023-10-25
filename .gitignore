@@ -4,3 +4,4 @@
 *.avi
 *.webm
 *.weights
+config/mars-small128.pb
