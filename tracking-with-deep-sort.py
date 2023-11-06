@@ -105,7 +105,7 @@ def detector(frame, min_confidence=0.6):
     if detections is not None:
         tracked_objects = []
         mot_tracker.predict()
-        import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
         mot_tracker.update(detections)
         for track in mot_tracker.tracks:
             if not track.is_confirmed() or track.time_since_update > 1:
@@ -123,7 +123,8 @@ def detector(frame, min_confidence=0.6):
             color = colors[int(obj_id) % len(colors)]
             color = [i * 255 for i in color]
             cv2.rectangle(frame, (x1, y1), (x1+box_w, y1+box_h), color, 4)
-            cv2.putText(frame, str(mot_tracker.num_human), (0, 0), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+            cv2.putText(frame, str(int(obj_id)), (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 3)
+    cv2.putText(frame, str(mot_tracker.num_human), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1, cv2.LINE_AA)
     frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
     return frame
 
@@ -132,7 +133,7 @@ import cv2
 cap = cv2.VideoCapture('/root/tracking-with-sort/MOT16-04-raw.webm')
 ret, frame = cap.read()
 frame_height, frame_width, _ = frame.shape
-out = cv2.VideoWriter('output.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 10, (frame_width,frame_height))
+out = cv2.VideoWriter('output.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 25, (frame_width,frame_height))
 print("Processing Video...")
 while cap.isOpened():
   ret, frame = cap.read()
