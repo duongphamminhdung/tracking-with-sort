@@ -132,10 +132,12 @@ class Tracker:
 
     def _initiate_track(self, detection):
         mean, covariance = self.kf.initiate(detection.to_xyah())
+        # import pdb; pdb.set_trace()
         self.tracks.append(Track(
-            mean, covariance, self._next_id, self.n_init, self.max_age, detection.class_id,
+            mean, covariance, self._next_id, self.n_init, self.max_age, detection.class_id, 
             detection.feature))
         
         if detection.class_id == 0:
             self.num_human += 1
         self._next_id += 1
+

@@ -41,6 +41,10 @@ Tensor = torch.cuda.FloatTensor
 detection_model_path = '/root/tracking-with-sort/config/mars-small128.pb'
 encoder = generate_detections.create_box_encoder(detection_model_path, batch_size=32)
 
+#for counting
+# num_in = 0
+# num_out = 0
+
 def detect_image(frame):
     # scale and pad image
     img = Image.fromarray(frame)
@@ -83,6 +87,9 @@ mot_tracker = Tracker(metric)
 
 
 def detector(frame, min_confidence=0.6):
+    global num_in, num_out, frame_height, frame_width
+    
+    line = frame_height // 2
     # ret, frame = vid.read()
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     pilimg = frame
@@ -102,6 +109,7 @@ def detector(frame, min_confidence=0.6):
     pad_y = max(img.shape[1] - img.shape[0], 0) * (img_size / max(img.shape))
     unpad_h = img_size - pad_y
     unpad_w = img_size - pad_x
+    
     if detections is not None:
         tracked_objects = []
         mot_tracker.predict()
@@ -111,10 +119,11 @@ def detector(frame, min_confidence=0.6):
             if not track.is_confirmed() or track.time_since_update > 1:
                 continue
             bbox = track.to_tlwh()
-            tracked_objects.append([
-                bbox[0], bbox[1], bbox[2], bbox[3], track.track_id])
+            x1, y1, x2, y2, obj_id = bbox[0], bbox[1], bbox[2], bbox[3], track.track_id
+            # tracked_objects.append([
+            #     bbox[0], bbox[1], bbox[2], bbox[3], track.track_id, track.prev_pos, track.class_id])
 
-        for x1, y1, x2, y2, obj_id in tracked_objects:
+        # for x1, y1, x2, y2, obj_id, prev_pos, class_id in tracked_objects:
             box_h = int(((y2 - y1) / unpad_h) * img.shape[0])
             box_w = int(((x2 - x1) / unpad_w) * img.shape[1])
             y1 = int(((y1 - pad_y // 2) / unpad_h) * img.shape[0])
@@ -122,9 +131,30 @@ def detector(frame, min_confidence=0.6):
 
             color = colors[int(obj_id) % len(colors)]
             color = [i * 255 for i in color]
-            cv2.rectangle(frame, (x1, y1), (x1+box_w, y1+box_h), color, 4)
+            # cv2.rectangle(frame, (x1, y1), (x1+box_w, y1+box_h), color, 4)
             cv2.putText(frame, str(int(obj_id)), (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 3)
-    cv2.putText(frame, str(mot_tracker.num_human), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1, cv2.LINE_AA)
+            
+            #in or out
+            if track.class_id == 0:
+                if track.prev_pos == 1:
+                    track.prev_pos = y1+box_h
+                    
+                elif track.prev_pos > line and y1+box_h < line:
+                    track.prev_pos = line-2
+                    num_out += 1
+                    # print(num_out)
+                    # import pdb; pdb.set_trace()
+                    cv2.rectangle(frame, (x1, y1), (x1+box_w, y1+box_h), color, -1)
+                elif track.prev_pos  < line and y1+box_h > line:
+                    track.prev_pos = line+2
+                    num_in += 1
+                    cv2.rectangle(frame, (x1, y1), (x1+box_w, y1+box_h), color, -1)
+            
+            cv2.rectangle(frame, (x1, y1), (x1+box_w, y1+box_h), color, 4)
+    cv2.putText(frame, 'in: '+str(num_in), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1, cv2.LINE_AA)
+    cv2.putText(frame, 'out: '+str(num_out), (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1, cv2.LINE_AA)
+    # import pdb; pdb.set_trace()
+    cv2.line(frame, (0, line), (frame_width, line), (0, 255, 255), 4)
     frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
     return frame
 
@@ -135,12 +165,16 @@ ret, frame = cap.read()
 frame_height, frame_width, _ = frame.shape
 out = cv2.VideoWriter('output.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 25, (frame_width,frame_height))
 print("Processing Video...")
+num_in = 0
+num_out = 0
 while cap.isOpened():
-  ret, frame = cap.read()
-  if not ret:
-    out.release()
-    break
-  output = detector(frame)
-  out.write(output)
+    # import pdb; pdb.set_trace()
+    ret, frame = cap.read()
+    if not ret:
+        out.release()
+        break
+
+    output = detector(frame)
+    out.write(output)
 out.release()
 print("Done processing video")
