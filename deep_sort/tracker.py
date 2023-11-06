@@ -46,7 +46,7 @@ class Tracker:
         self.kf = kalman_filter.KalmanFilter()
         self.tracks = []
         self._next_id = 1
-
+        self.num_human = 0
     def predict(self):
         """Propagate track state distributions one time step forward.
 
@@ -133,6 +133,9 @@ class Tracker:
     def _initiate_track(self, detection):
         mean, covariance = self.kf.initiate(detection.to_xyah())
         self.tracks.append(Track(
-            mean, covariance, self._next_id, self.n_init, self.max_age,
+            mean, covariance, self._next_id, self.n_init, self.max_age, detection.class_id,
             detection.feature))
+        
+        if detection.class_id == 0:
+            self.num_human += 1
         self._next_id += 1

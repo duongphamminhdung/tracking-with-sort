@@ -64,12 +64,13 @@ def detect_image(frame):
     for row in detections[0]:
         bbox, confidence = row[0:4], row[4]
         # import pdb; pdb.set_trace()
+        class_id = row[-1]
         bgr_image = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         feature = encoder(bgr_image, [row[0:4].cpu()]).squeeze()
         if bbox[3] < 0: #min_height
             continue
         # import pdb; pdb.set_trace()
-        detection_list.append(Detection(bbox, confidence, feature))
+        detection_list.append(Detection(bbox, confidence, feature, class_id))
     return detection_list
 
 cmap = plt.get_cmap('tab20b')
@@ -122,6 +123,7 @@ def detector(frame, min_confidence=0.6):
             color = colors[int(obj_id) % len(colors)]
             color = [i * 255 for i in color]
             cv2.rectangle(frame, (x1, y1), (x1+box_w, y1+box_h), color, 4)
+            cv2.putText(frame, str(mot_tracker.num_human), (0, 0), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
     frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
     return frame
 
