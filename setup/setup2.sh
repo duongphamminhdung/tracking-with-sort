@@ -6,4 +6,4 @@ wget https://pjreddie.com/media/files/yolov3.weights -P /root/tracking-with-sort
 wget https://motchallenge.net/sequenceVideos/MOT16-04-raw.webm -P /root/tracking-with-sort
 
 pip install gdown
-gdown https://drive.google.com/uc?id=1bB66hP9voDXuoBoaCcKYY7a8IYzMMs4P -O /root/tracking-with-sort/config/mars-small128.pb
+wget https://drive.google.com/uc?id=1bB66hP9voDXuoBoaCcKYY7a8IYzMMs4P -O /root/tracking-with-sort/config/mars-small128.pb
